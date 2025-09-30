@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
+import shared.MediaType
 import shared.PermissionCallback
 import shared.PermissionStatus
 import shared.PermissionType
@@ -51,6 +52,9 @@ fun App() {
         var launchGallery by remember { mutableStateOf(value = false) }
         var launchSetting by remember { mutableStateOf(value = false) }
         var permissionRationalDialog by remember { mutableStateOf(value = false) }
+        var currentScreen by remember { mutableStateOf("main") }
+
+
         val permissionsManager = createPermissionsManager(object : PermissionCallback {
             override fun onPermissionStatus(
                 permissionType: PermissionType,
@@ -76,12 +80,20 @@ fun App() {
         val cameraManager = rememberCameraManager { media ->
             coroutineScope.launch {
                 mediaContent = media
+                currentScreen = when (media) {
+                    is SharedMedia.Image -> "edit"
+                    else -> "main"
+                }
             }
         }
 
         val galleryManager = rememberGalleryManager { media ->
             coroutineScope.launch {
                 mediaContent = media
+                when (media) {
+                    is SharedMedia.Image -> currentScreen = "edit"
+                    else -> "main"
+                }
             }
         }
 
@@ -132,70 +144,96 @@ fun App() {
                 })
 
         }
-        Box(
-            modifier = Modifier.fillMaxSize().background(Color.DarkGray),
-            contentAlignment = Alignment.Center
-        ) {
-            when (val media = mediaContent) {
-                is SharedMedia.Image -> {
-                    // Display image
-                    media.toImageBitmap()?.let { imageBitmap ->
-                        Image(
-                            bitmap = imageBitmap,
-                            contentDescription = "Profile",
-                            modifier = Modifier.size(100.dp).clip(CircleShape).clickable {
-                                imageSourceOptionDialog = true
-                            },
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
 
-                is SharedMedia.Video -> {
-                    // Display video thumbnail with play icon
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { imageSourceOptionDialog = true }
-                    ) {
-                        media.getThumbnailBitmap()?.let { thumbnail ->
-                            Box {
-                                Image(
-                                    bitmap = thumbnail,
-                                    contentDescription = "Video thumbnail",
-                                    modifier = Modifier.size(100.dp).clip(CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
-                                // Play icon overlay
-                                Icon(
-                                    imageVector = PlayerPlay,
-                                    contentDescription = "Play",
-                                    modifier = Modifier.size(40.dp).align(Alignment.Center),
-                                    tint = Color.White
-                                )
+        when (currentScreen) {
+            "main" -> MainScreen(
+                mediaContent = mediaContent,
+                onImageClick = {
+                    imageSourceOptionDialog = true
+                },
+                onVideoClick = {
+                    imageSourceOptionDialog = true
+                }
+            )
+            "edit" -> {
+                (mediaContent as? SharedMedia.Image)?.let { image ->
+                    ImageEditScreen(
+                        image = image,
+                        onBack = { currentScreen = "main" },
+                        onDone = {
+                            currentScreen = "main"
+                            coroutineScope.launch {
+                                mediaContent = SharedMedia.Image(it)
                             }
                         }
-
-                        // Show duration
-                        Text(
-                            text = formatDuration(media.duration),
-                            color = Color.White,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-                null -> {
-                    // Show default placeholder
-                    Image(
-                        modifier = Modifier.size(100.dp).clip(CircleShape).clickable {
-                            imageSourceOptionDialog = true
-                        },
-                        painter = painterResource("ic_person_circle.xml"),
-                        contentDescription = "Profile",
                     )
                 }
             }
         }
+//        Box(
+//            modifier = Modifier.fillMaxSize().background(Color.DarkGray),
+//            contentAlignment = Alignment.Center
+//        ) {
+//            when (val media = mediaContent) {
+//                is SharedMedia.Image -> {
+//                    // Display image
+//                    media.toImageBitmap()?.let { imageBitmap ->
+//                        Image(
+//                            bitmap = imageBitmap,
+//                            contentDescription = "Profile",
+//                            modifier = Modifier.size(100.dp).clip(CircleShape).clickable {
+//                                imageSourceOptionDialog = true
+//                            },
+//                            contentScale = ContentScale.claude.Crop
+//                        )
+//                    }
+//                }
+//
+//                is SharedMedia.Video -> {
+//                    // Display video thumbnail with play icon
+//                    Column(
+//                        horizontalAlignment = Alignment.CenterHorizontally,
+//                        modifier = Modifier.clickable { imageSourceOptionDialog = true }
+//                    ) {
+//                        media.getThumbnailBitmap()?.let { thumbnail ->
+//                            Box {
+//                                Image(
+//                                    bitmap = thumbnail,
+//                                    contentDescription = "Video thumbnail",
+//                                    modifier = Modifier.size(100.dp).clip(CircleShape),
+//                                    contentScale = ContentScale.claude.Crop
+//                                )
+//                                // Play icon overlay
+//                                Icon(
+//                                    imageVector = PlayerPlay,
+//                                    contentDescription = "Play",
+//                                    modifier = Modifier.size(40.dp).align(Alignment.Center),
+//                                    tint = Color.White
+//                                )
+//                            }
+//                        }
+//
+//                        // Show duration
+//                        Text(
+//                            text = formatDuration(media.duration),
+//                            color = Color.White,
+//                            fontSize = 12.sp
+//                        )
+//                    }
+//                }
+//
+//                null -> {
+//                    // Show default placeholder
+//                    Image(
+//                        modifier = Modifier.size(100.dp).clip(CircleShape).clickable {
+//                            imageSourceOptionDialog = true
+//                        },
+//                        painter = painterResource("ic_person_circle.xml"),
+//                        contentDescription = "Profile",
+//                    )
+//                }
+//            }
+//        }
     }
 }
 

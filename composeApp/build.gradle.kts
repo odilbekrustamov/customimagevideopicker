@@ -35,6 +35,7 @@ kotlin {
             implementation(libs.accompanist.permissions)
 
             implementation("androidx.compose.material:material-icons-extended:1.0.0")
+//            implementation("io.github.rroohit:ImageCropView:3.1.1")
 
             implementation(libs.androidx.camera.core)
             implementation(libs.androidx.camera.lifecycle)
